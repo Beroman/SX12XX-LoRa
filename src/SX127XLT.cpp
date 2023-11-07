@@ -2269,6 +2269,107 @@ uint8_t SX127XLT::receive(uint8_t *rxbuffer, uint8_t size, uint32_t rxtimeout, u
 }
 
 
+uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size, uint32_t rxtimeout, uint8_t wait )
+{
+#ifdef SX127XDEBUG1
+  Serial.println(F("receive()"));
+#endif
+
+  uint16_t index;
+  uint32_t startmS;
+  uint8_t regdata;
+
+  setMode(MODE_STDBY_RC);
+  regdata = readRegister(REG_FIFORXBASEADDR);                              //retrieve the RXbase address pointer
+  writeRegister(REG_FIFOADDRPTR, regdata);                                 //and save in FIFO access ptr
+
+  setDioIrqParams(IRQ_RADIO_ALL, (IRQ_RX_DONE), 0, 0);                     //set for IRQ on RX done
+  // setRx(0);   
+
+// startmS = millis();
+//   while (!digitalRead(_RXDonePin)); 
+  
+  Serial.print(F("start RXDonePin = "));
+  Serial.println(digitalRead(_RXDonePin));                                                             //no actual RX timeout in this function
+
+  // if (!wait)
+  // {
+  //   return 0;                                                              //not wait requested so no packet length to pass
+  // }
+
+  // if (rxtimeout == 0)
+  // {
+  //   while (!digitalRead(_RXDonePin));                                      //Wait for DIO0 to go high, no timeout, RX DONE
+  // }
+  // else
+  // {
+  //   //change to allow for millis() rollover
+  //   //code was  endtimeoutmS = millis() + rxtimeout; while (!digitalRead(_RXDonePin) && (millis() < endtimeoutmS));
+  //   startmS = millis();
+  //   while (!digitalRead(_RXDonePin) && ((uint32_t) (millis() - startmS) < rxtimeout));
+  // }
+
+  setMode(MODE_STDBY_RC);                                                  //ensure to stop further packet reception
+
+  if (!digitalRead(_RXDonePin))                                            //check if DIO still low, if so must be RX timeout
+  {
+    _IRQmsb = IRQ_RX_TIMEOUT;
+    return 0;
+  }
+
+
+  if ( readIrqStatus() != (IRQ_RX_DONE + IRQ_HEADER_VALID) )
+  {
+    return 0;                                                              //no RX done and header valid only, could be CRC error
+  }
+
+  _RXPacketL = readRegister(REG_RXNBBYTES);
+
+  if (_RXPacketL > size)                      //check passed buffer is big enough for packet
+  {
+    _RXPacketL = size;                        //truncate packet if not enough space in passed buffer
+  }
+
+  //print _RXDonePin status
+  Serial.print(F("RXDonePin = "));
+  Serial.println(digitalRead(_RXDonePin));
+
+  //print IRQ status
+  Serial.print(F("IRQ status = "));
+  Serial.println(readIrqStatus());
+
+  //print _RXPacketL
+  Serial.print(F("_RXPacketL = "));
+  Serial.println(_RXPacketL);
+
+
+
+#ifdef USE_SPI_TRANSACTION   //to use SPI_TRANSACTION enable define at beginning of CPP file 
+  SPI.beginTransaction(SPISettings(LTspeedMaximum, LTdataOrder, LTdataMode));
+#endif
+
+  digitalWrite(_NSS, LOW);                    //start the burst read
+  SPI.transfer(REG_FIFO);
+
+  for (index = 0; index < _RXPacketL; index++)
+  {
+    regdata = SPI.transfer(0);
+    rxbuffer[index] = regdata;
+  }
+  digitalWrite(_NSS, HIGH);
+
+#ifdef USE_SPI_TRANSACTION
+  SPI.endTransaction();
+#endif
+
+  //Done pin at end of receive
+  Serial.print(F("RXDonePin = "));
+  Serial.println(digitalRead(_RXDonePin));
+
+  return _RXPacketL;
+}
+
+
 uint8_t SX127XLT::receiveIRQ(uint8_t *rxbuffer, uint8_t size, uint32_t rxtimeout, uint8_t wait )
 {
 #ifdef SX127XDEBUG1

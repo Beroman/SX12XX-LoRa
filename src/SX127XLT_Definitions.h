@@ -19,6 +19,7 @@
 #define MODE_FSRX                                   0x04   //Frequency synthesis RX mode
 #define MODE_RXCONTINUOUS                           0x05   //RX continuous mode
 #define MODE_RXSINGLE                               0x06   //RX single mode
+#define MODE_LONG_RANGE_MODE     0x80
 
 #define MODE_CAD                                    0xFF   //RX CAD mode
 

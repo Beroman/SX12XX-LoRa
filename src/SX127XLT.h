@@ -276,6 +276,13 @@ class SX127XLT
     uint8_t sendACKDTIRQ(uint8_t *header, uint8_t headersize, int8_t txpower);
     uint8_t waitACKDTIRQ(uint8_t *header, uint8_t headersize, uint32_t acktimeout);
 
+
+    //*******************************************************************************
+    //For interrupts
+    //*******************************************************************************
+
+    uint8_t receiveForInterrupt(uint8_t *rxbuffer, uint8_t size, uint32_t rxtimeout, uint8_t wait );
+
     //*******************************************************************************
     //RX\TX Enable routines - Not yet tested as of 02/12/19
     //*******************************************************************************
