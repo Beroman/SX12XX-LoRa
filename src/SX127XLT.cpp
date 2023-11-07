@@ -2269,7 +2269,7 @@ uint8_t SX127XLT::receive(uint8_t *rxbuffer, uint8_t size, uint32_t rxtimeout, u
 }
 
 
-uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size, uint32_t rxtimeout, uint8_t wait )
+uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size)
 {
 #ifdef SX127XDEBUG1
   Serial.println(F("receive()"));
@@ -2291,23 +2291,6 @@ uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size, uint32_t 
   
   Serial.print(F("start RXDonePin = "));
   Serial.println(digitalRead(_RXDonePin));                                                             //no actual RX timeout in this function
-
-  // if (!wait)
-  // {
-  //   return 0;                                                              //not wait requested so no packet length to pass
-  // }
-
-  // if (rxtimeout == 0)
-  // {
-  //   while (!digitalRead(_RXDonePin));                                      //Wait for DIO0 to go high, no timeout, RX DONE
-  // }
-  // else
-  // {
-  //   //change to allow for millis() rollover
-  //   //code was  endtimeoutmS = millis() + rxtimeout; while (!digitalRead(_RXDonePin) && (millis() < endtimeoutmS));
-  //   startmS = millis();
-  //   while (!digitalRead(_RXDonePin) && ((uint32_t) (millis() - startmS) < rxtimeout));
-  // }
 
   setMode(MODE_STDBY_RC);                                                  //ensure to stop further packet reception
 
@@ -2365,6 +2348,8 @@ uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size, uint32_t 
   //Done pin at end of receive
   Serial.print(F("RXDonePin = "));
   Serial.println(digitalRead(_RXDonePin));
+
+  // setRx(0); 
 
   return _RXPacketL;
 }
@@ -2677,6 +2662,8 @@ uint8_t SX127XLT::transmit(uint8_t *txbuffer, uint8_t size, uint32_t txtimeout, 
     _IRQmsb = IRQ_TX_TIMEOUT;
     return 0;
   }
+
+
 
   return _TXPacketL;                                   //no timeout, so TXdone must have been set
 }
@@ -7053,6 +7040,13 @@ uint8_t SX127XLT::waitACKDTIRQ(uint8_t *header, uint8_t headersize, uint32_t ack
   bitSet(_ReliableErrors, ReliableTimeout);
   return 0;
 }
+
+//go to continuous receive mode with no timeout
+void SX127XLT::setContinuousRXMode()
+{
+  writeRegister(REG_OPMODE, MODE_LONG_RANGE_MODE | MODE_RXCONTINUOUS);                                             //no actual RX timeout in this function
+}
+
 
 
 /*

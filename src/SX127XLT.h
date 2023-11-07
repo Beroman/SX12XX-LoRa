@@ -281,7 +281,8 @@ class SX127XLT
     //For interrupts
     //*******************************************************************************
 
-    uint8_t receiveForInterrupt(uint8_t *rxbuffer, uint8_t size, uint32_t rxtimeout, uint8_t wait );
+    uint8_t receiveForInterrupt(uint8_t *rxbuffer, uint8_t size);
+    void setContinuousRXMode();
 
     //*******************************************************************************
     //RX\TX Enable routines - Not yet tested as of 02/12/19
