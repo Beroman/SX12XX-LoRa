@@ -2276,21 +2276,13 @@ uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size)
 #endif
 
   uint16_t index;
-  uint32_t startmS;
   uint8_t regdata;
 
   setMode(MODE_STDBY_RC);
   regdata = readRegister(REG_FIFORXBASEADDR);                              //retrieve the RXbase address pointer
   writeRegister(REG_FIFOADDRPTR, regdata);                                 //and save in FIFO access ptr
 
-  setDioIrqParams(IRQ_RADIO_ALL, (IRQ_RX_DONE), 0, 0);                     //set for IRQ on RX done
-  // setRx(0);   
-
-// startmS = millis();
-//   while (!digitalRead(_RXDonePin)); 
-  
-  Serial.print(F("start RXDonePin = "));
-  Serial.println(digitalRead(_RXDonePin));                                                             //no actual RX timeout in this function
+  setDioIrqParams(IRQ_RADIO_ALL, (IRQ_RX_DONE), 0, 0);                     //set for IRQ on RX done                                                           //no actual RX timeout in this function
 
   setMode(MODE_STDBY_RC);                                                  //ensure to stop further packet reception
 
@@ -2313,20 +2305,6 @@ uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size)
     _RXPacketL = size;                        //truncate packet if not enough space in passed buffer
   }
 
-  //print _RXDonePin status
-  Serial.print(F("RXDonePin = "));
-  Serial.println(digitalRead(_RXDonePin));
-
-  //print IRQ status
-  Serial.print(F("IRQ status = "));
-  Serial.println(readIrqStatus());
-
-  //print _RXPacketL
-  Serial.print(F("_RXPacketL = "));
-  Serial.println(_RXPacketL);
-
-
-
 #ifdef USE_SPI_TRANSACTION   //to use SPI_TRANSACTION enable define at beginning of CPP file 
   SPI.beginTransaction(SPISettings(LTspeedMaximum, LTdataOrder, LTdataMode));
 #endif
@@ -2344,12 +2322,6 @@ uint8_t SX127XLT::receiveForInterrupt(uint8_t *rxbuffer, uint8_t size)
 #ifdef USE_SPI_TRANSACTION
   SPI.endTransaction();
 #endif
-
-  //Done pin at end of receive
-  Serial.print(F("RXDonePin = "));
-  Serial.println(digitalRead(_RXDonePin));
-
-  // setRx(0); 
 
   return _RXPacketL;
 }
@@ -2664,6 +2636,51 @@ uint8_t SX127XLT::transmit(uint8_t *txbuffer, uint8_t size, uint32_t txtimeout, 
   }
 
 
+
+  return _TXPacketL;                                   //no timeout, so TXdone must have been set
+}
+
+uint8_t SX127XLT::transmitForInterrupt(uint8_t *txbuffer, uint8_t size, int8_t txpower)
+{
+#ifdef SX127XDEBUG1
+  Serial.println(F("transmit()"));
+#endif
+
+  uint8_t index, ptr;
+  uint8_t bufferdata;
+
+  if (size == 0)
+  {
+    return false;
+  }
+
+  setMode(MODE_STDBY_RC);
+  ptr = readRegister(REG_FIFOTXBASEADDR);       //retrieve the TXbase address pointer
+  writeRegister(REG_FIFOADDRPTR, ptr);          //and save in FIFO access ptr
+
+#ifdef USE_SPI_TRANSACTION                      //to use SPI_TRANSACTION enable define at beginning of CPP file 
+  SPI.beginTransaction(SPISettings(LTspeedMaximum, LTdataOrder, LTdataMode));
+#endif
+
+  digitalWrite(_NSS, LOW);
+  SPI.transfer(WREG_FIFO);
+
+  for (index = 0; index < size; index++)
+  {
+    bufferdata = txbuffer[index];
+    SPI.transfer(bufferdata);
+  }
+  digitalWrite(_NSS, HIGH);
+
+#ifdef USE_SPI_TRANSACTION
+  SPI.endTransaction();
+#endif
+
+  _TXPacketL = size;
+  writeRegister(REG_PAYLOADLENGTH, _TXPacketL);
+  setTxParams(txpower, RADIO_RAMP_DEFAULT);            //TX power and ramp time
+  setDioIrqParams(IRQ_RADIO_ALL, IRQ_TX_DONE, 0, 0);   //set for IRQ on TX done on first DIO pin
+  setTx(0);                                            //TX timeout is not handled in setTX()
 
   return _TXPacketL;                                   //no timeout, so TXdone must have been set
 }

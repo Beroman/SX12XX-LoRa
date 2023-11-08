@@ -282,6 +282,7 @@ class SX127XLT
     //*******************************************************************************
 
     uint8_t receiveForInterrupt(uint8_t *rxbuffer, uint8_t size);
+    uint8_t transmitForInterrupt(uint8_t *txbuffer, uint8_t size, int8_t txpower);
     void setContinuousRXMode();
 
     //*******************************************************************************
